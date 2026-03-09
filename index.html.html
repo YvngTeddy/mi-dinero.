@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mi Dinero Diario — Finanzas Simples</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,600;0,900;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --sage: #4a7c59;
+    --sage-light: #7ab08a;
+    --sage-pale: #e8f0eb;
+    --gold: #c8922a;
+    --gold-light: #f0c96a;
+    --gold-pale: #fdf6e3;
+    --coral: #d4614a;
+    --coral-pale: #fdecea;
+    --ink: #1a1a2e;
+    --ink-soft: #3d3d5c;
+    --mist: #f4f6f8;
+    --white: #ffffff;
+    --shadow: 0 4px 24px rgba(26,26,46,0.08);
+    --shadow-lg: 0 12px 48px rgba(26,26,46,0.14);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--mist); color: var(--ink); min-height: 100vh; }
+
+  header { background: var(--ink); position: relative; overflow: hidden; }
+  .header-inner { max-width: 1100px; margin: 0 auto; padding: 48px 32px 40px; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+  .header-text h1 { font-family: 'Fraunces', serif; font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 900; color: var(--white); line-height: 1.1; }
+  .header-text h1 span { color: var(--gold-light); }
+  .header-text p { color: #9999bb; margin-top: 10px; font-size: 1rem; font-weight: 300; }
+  .header-badge { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 16px 24px; text-align: center; min-width: 160px; }
+  .header-badge .date { color: var(--gold-light); font-size: 0.8rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; }
+  .header-badge .balance { color: white; font-family: 'Fraunces', serif; font-size: 1.9rem; font-weight: 600; margin-top: 2px; }
+  .header-badge .balance-label { color: #9999bb; font-size: 0.78rem; }
+  .header-decor { position: absolute; right: -80px; top: -80px; width: 320px; height: 320px; border-radius: 50%; background: radial-gradient(circle, rgba(200,146,42,0.12) 0%, transparent 70%); pointer-events: none; }
+
+  .tab-nav { background: var(--white); border-bottom: 1px solid #e8eaf0; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .tab-nav-inner { max-width: 1100px; margin: 0 auto; padding: 0 32px; display: flex; gap: 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .tab-nav-inner::-webkit-scrollbar { display: none; }
+  .tab-btn { padding: 16px 20px; border: none; background: none; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 500; color: #888; cursor: pointer; white-space: nowrap; border-bottom: 3px solid transparent; transition: all 0.2s; display: flex; align-items: center; gap: 7px; }
+  .tab-btn.active { color: var(--sage); border-bottom-color: var(--sage); }
+  .tab-btn:hover:not(.active) { color: var(--ink-soft); }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 32px 32px 80px; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .section-title { font-family: 'Fraunces', serif; font-size: 1.6rem; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+  .section-sub { color: #777; font-size: 0.9rem; margin-bottom: 28px; }
+
+  .card { background: var(--white); border-radius: 20px; padding: 28px; box-shadow: var(--shadow); margin-bottom: 24px; }
+  .card-title { font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .card-sub { color: #888; font-size: 0.83rem; margin-bottom: 20px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  @media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } main { padding: 20px 16px 60px; } .header-inner { padding: 32px 20px 28px; } .tab-nav-inner { padding: 0 16px; } }
+
+  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+  @media (max-width: 600px) { .stats-row { grid-template-columns: 1fr; } }
+  .stat-card { border-radius: 16px; padding: 22px 20px; position: relative; overflow: hidden; }
+  .stat-card.income { background: var(--sage-pale); }
+  .stat-card.expense { background: var(--coral-pale); }
+  .stat-card.savings { background: var(--gold-pale); }
+  .stat-label { font-size: 0.78rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; }
+  .stat-amount { font-family: 'Fraunces', serif; font-size: 1.8rem; font-weight: 600; margin-top: 4px; }
+  .stat-card.income .stat-amount { color: var(--sage); }
+  .stat-card.expense .stat-amount { color: var(--coral); }
+  .stat-card.savings .stat-amount { color: var(--gold); }
+  .stat-icon { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); font-size: 2rem; opacity: 0.25; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 12px; align-items: end; margin-bottom: 20px; }
+  @media (max-width: 700px) { .form-row { grid-template-columns: 1fr 1fr; } }
+  .form-group label { display: block; font-size: 0.8rem; font-weight: 500; color: #666; margin-bottom: 6px; }
+  .form-group input, .form-group select { width: 100%; padding: 11px 14px; border: 1.5px solid #e0e3ea; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--ink); background: var(--white); transition: border-color 0.2s; outline: none; }
+  .form-group input:focus, .form-group select:focus { border-color: var(--sage); }
+  .btn-primary { padding: 11px 22px; background: var(--sage); color: white; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: background 0.2s, transform 0.1s; white-space: nowrap; }
+  .btn-primary:hover { background: #3a6648; }
+  .btn-primary:active { transform: scale(0.97); }
+
+  .transactions-list { margin-top: 8px; }
+  .tx-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid #f0f2f5; gap: 12px; }
+  .tx-item:last-child { border-bottom: none; }
+  .tx-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+  .tx-info { flex: 1; min-width: 0; }
+  .tx-name { font-weight: 500; font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tx-date { font-size: 0.75rem; color: #aaa; }
+  .tx-cat { font-size: 0.72rem; padding: 3px 8px; border-radius: 20px; font-weight: 500; flex-shrink: 0; }
+  .tx-amount { font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 600; flex-shrink: 0; }
+  .tx-amount.positive { color: var(--sage); }
+  .tx-amount.negative { color: var(--coral); }
+  .tx-delete { background: none; border: none; color: #ccc; cursor: pointer; font-size: 1rem; padding: 4px; border-radius: 6px; transition: color 0.2s; flex-shrink: 0; }
+  .tx-delete:hover { color: var(--coral); }
+
+  .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
+  .cat-card { border-radius: 14px; padding: 18px 16px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+  .cat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+  .cat-emoji { font-size: 1.8rem; margin-bottom: 8px; }
+  .cat-name { font-weight: 600; font-size: 0.88rem; }
+  .cat-desc { font-size: 0.75rem; opacity: 0.75; margin-top: 3px; }
+  .cat-tip { margin-top: 10px; font-size: 0.73rem; opacity: 0.8; border-top: 1px solid rgba(0,0,0,0.07); padding-top: 8px; }
+
+  .tip-list { display: flex; flex-direction: column; gap: 14px; }
+  .tip-item { display: flex; gap: 16px; align-items: flex-start; padding: 18px; background: var(--mist); border-radius: 14px; border-left: 4px solid transparent; }
+  .tip-item.green { border-left-color: var(--sage); }
+  .tip-item.gold { border-left-color: var(--gold); }
+  .tip-item.coral { border-left-color: var(--coral); }
+  .tip-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 2px; }
+  .tip-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; }
+  .tip-text { font-size: 0.83rem; color: #666; line-height: 1.5; }
+
+  .rule-viz { display: flex; height: 56px; border-radius: 14px; overflow: hidden; margin: 20px 0; }
+  .rule-seg { display: flex; align-items: center; justify-content: center; flex-direction: column; color: white; font-weight: 600; }
+  .rule-seg .pct { font-family: 'Fraunces', serif; font-size: 1.2rem; }
+  .rule-seg .lbl { font-size: 0.68rem; opacity: 0.85; }
+  .rule-needs { background: var(--sage); flex: 50; }
+  .rule-wants { background: var(--gold); flex: 30; }
+  .rule-save  { background: var(--coral); flex: 20; }
+  .rule-legend { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+  .legend-item { padding: 14px; border-radius: 12px; }
+  .legend-item.needs { background: var(--sage-pale); }
+  .legend-item.wants { background: var(--gold-pale); }
+  .legend-item.save  { background: var(--coral-pale); }
+  .legend-label { font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; }
+  .legend-label.needs { color: var(--sage); }
+  .legend-label.wants { color: var(--gold); }
+  .legend-label.save  { color: var(--coral); }
+  .legend-text { font-size: 0.76rem; color: #666; }
+
+  .chart-wrap { position: relative; height: 260px; }
+
+  .app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+  .app-card { border: 1.5px solid #e8eaf0; border-radius: 14px; padding: 18px; transition: border-color 0.2s, box-shadow 0.2s; }
+  .app-card:hover { border-color: var(--sage-light); box-shadow: var(--shadow); }
+  .app-logo { font-size: 2rem; margin-bottom: 10px; }
+  .app-name { font-weight: 600; font-size: 0.9rem; }
+  .app-type { font-size: 0.73rem; color: var(--sage); font-weight: 500; margin-bottom: 6px; }
+  .app-desc { font-size: 0.78rem; color: #777; line-height: 1.4; }
+  .app-free { display: inline-block; margin-top: 8px; font-size: 0.7rem; padding: 3px 8px; background: var(--sage-pale); color: var(--sage); border-radius: 20px; font-weight: 500; }
+
+  .emerg-bar { background: #eef0f4; border-radius: 14px; height: 20px; overflow: hidden; margin: 14px 0; }
+  .emerg-fill { height: 100%; border-radius: 14px; background: linear-gradient(90deg, var(--sage), var(--sage-light)); display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; color: white; font-size: 0.72rem; font-weight: 600; transition: width 0.8s ease; min-width: 36px; }
+
+  .mistake-item { display: flex; gap: 14px; padding: 16px; border-radius: 12px; background: #fff8f7; border-left: 3px solid var(--coral); margin-bottom: 12px; }
+  .mistake-num { background: var(--coral-pale); color: var(--coral); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; flex-shrink: 0; }
+  .mistake-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 3px; }
+  .mistake-text { font-size: 0.8rem; color: #777; }
+
+  .affirmation-box { background: linear-gradient(135deg, var(--ink) 0%, #2d2d4a 100%); border-radius: 20px; padding: 36px 32px; text-align: center; margin-bottom: 24px; }
+  .affirmation-box h3 { font-family: 'Fraunces', serif; color: var(--gold-light); font-size: 1.4rem; font-style: italic; margin-bottom: 12px; }
+  .affirmation-box p { color: #9999bb; font-size: 0.88rem; line-height: 1.6; }
+  .affirmation-cycle { display: flex; gap: 10px; justify-content: center; margin-top: 18px; flex-wrap: wrap; }
+  .aff-chip { padding: 7px 16px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 20px; color: white; font-size: 0.78rem; cursor: pointer; transition: background 0.2s; font-family: 'DM Sans', sans-serif; }
+  .aff-chip:hover { background: rgba(255,255,255,0.15); }
+
+  .resource-item { display: flex; gap: 14px; padding: 16px 18px; border-radius: 12px; border: 1.5px solid #e8eaf0; margin-bottom: 12px; align-items: flex-start; transition: border-color 0.2s; }
+  .resource-item:hover { border-color: var(--sage-light); }
+  .resource-icon { font-size: 1.5rem; flex-shrink: 0; }
+  .resource-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 3px; }
+  .resource-text { font-size: 0.8rem; color: #777; }
+
+  .empty-state { text-align: center; padding: 48px 24px; color: #aaa; }
+  .empty-state .emoji { font-size: 3rem; margin-bottom: 12px; }
+  .empty-state p { font-size: 0.88rem; }
+
+  .pill { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .note { background: var(--gold-pale); border-left: 3px solid var(--gold); border-radius: 0 10px 10px 0; padding: 12px 16px; font-size: 0.82rem; color: #7a5a1a; margin-top: 16px; }
+  .note strong { color: var(--gold); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-decor"></div>
+  <div class="header-inner">
+    <div class="header-text">
+      <h1>Mi Dinero <span>Diario</span></h1>
+      <p>Gestiona tus finanzas de forma simple, sin términos complicados ✨</p>
+    </div>
+    <div class="header-badge">
+      <div class="date" id="headerDate">Hoy</div>
+      <div class="balance" id="headerBalance">$0</div>
+      <div class="balance-label">Balance del mes</div>
+    </div>
+  </div>
+</header>
+
+<nav class="tab-nav">
+  <div class="tab-nav-inner">
+    <button class="tab-btn active" onclick="switchTab('registro',this)">📋 Mi Registro</button>
+    <button class="tab-btn" onclick="switchTab('categorias',this)">🗂️ Categorías</button>
+    <button class="tab-btn" onclick="switchTab('presupuesto',this)">📊 Presupuesto</button>
+    <button class="tab-btn" onclick="switchTab('graficas',this)">📈 Gráficas</button>
+    <button class="tab-btn" onclick="switchTab('errores',this)">⚠️ Errores Comunes</button>
+    <button class="tab-btn" onclick="switchTab('herramientas',this)">🛠️ Herramientas</button>
+    <button class="tab-btn" onclick="switchTab('mentalidad',this)">💚 Mentalidad</button>
+  </div>
+</nav>
+
+<main>
+
+  <!-- REGISTRO -->
+  <div id="tab-registro" class="tab-content active">
+    <h2 class="section-title">📋 Mi Registro Diario</h2>
+    <p class="section-sub">Anota cada ingreso o gasto. Pequeños registros generan grandes cambios.</p>
+    <div class="stats-row">
+      <div class="stat-card income"><div class="stat-label">Ingresos</div><div class="stat-amount" id="totalIncome">$0</div><div class="stat-icon">💰</div></div>
+      <div class="stat-card expense"><div class="stat-label">Gastos</div><div class="stat-amount" id="totalExpense">$0</div><div class="stat-icon">🛒</div></div>
+      <div class="stat-card savings"><div class="stat-label">Balance</div><div class="stat-amount" id="totalBalance">$0</div><div class="stat-icon">🏦</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">➕ Agregar movimiento</div>
+      <div class="card-sub">Registra un ingreso o gasto rápidamente</div>
+      <div class="form-row">
+        <div class="form-group"><label>Descripción</label><input type="text" id="txDesc" placeholder="Ej: Mercado, Salario..."></div>
+        <div class="form-group"><label>Monto ($)</label><input type="number" id="txAmount" placeholder="0.00" min="0" step="0.01"></div>
+        <div class="form-group"><label>Categoría</label>
+          <select id="txCategory">
+            <option value="comestibles">🛒 Comestibles</option>
+            <option value="vivienda">🏠 Vivienda</option>
+            <option value="transporte">🚌 Transporte</option>
+            <option value="salud">💊 Salud</option>
+            <option value="entretenimiento">🎬 Entretenimiento</option>
+            <option value="educacion">📚 Educación</option>
+            <option value="ropa">👕 Ropa</option>
+            <option value="ahorros">🐷 Ahorros</option>
+            <option value="servicios">💡 Servicios</option>
+            <option value="salario">💵 Salario</option>
+            <option value="extra">🎁 Ingreso Extra</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Tipo</label><select id="txType"><option value="expense">Gasto</option><option value="income">Ingreso</option></select></div>
+        <button class="btn-primary" onclick="addTransaction()">Agregar</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📜 Movimientos recientes</div>
+      <div class="card-sub" id="txCount">Sin movimientos aún</div>
+      <div id="transactionsList" class="transactions-list">
+        <div class="empty-state"><div class="emoji">💳</div><p>Aún no hay movimientos.<br>¡Registra tu primer gasto o ingreso!</p></div>
+      </div>
+    </div>
+    <div class="note"><strong>💡 Consejo diario:</strong> Registra cada movimiento al momento de realizarlo. ¡30 segundos diarios pueden ahorrarte mucho dinero al mes!</div>
+  </div>
+
+  <!-- CATEGORÍAS -->
+  <div id="tab-categorias" class="tab-content">
+    <h2 class="section-title">🗂️ Categorías de Gastos</h2>
+    <p class="section-sub">Conoce en qué área va cada peso de tu dinero.</p>
+    <div class="cat-grid">
+      <div class="cat-card" style="background:#e8f0eb;color:#2d5e40"><div class="cat-emoji">🛒</div><div class="cat-name">Comestibles</div><div class="cat-desc">Supermercado y mercado</div><div class="cat-tip">💡 Haz una lista antes de ir al supermercado. Evita ir con hambre.</div></div>
+      <div class="cat-card" style="background:#e8ecf8;color:#2d3d7a"><div class="cat-emoji">🏠</div><div class="cat-name">Vivienda</div><div class="cat-desc">Arriendo o hipoteca</div><div class="cat-tip">💡 No debe superar el 30% de tus ingresos mensuales.</div></div>
+      <div class="cat-card" style="background:#fdf6e3;color:#7a5a1a"><div class="cat-emoji">🚌</div><div class="cat-name">Transporte</div><div class="cat-desc">Bus, taxi, gasolina</div><div class="cat-tip">💡 Compara el costo mensual del bus vs. tener carro propio.</div></div>
+      <div class="cat-card" style="background:#fdecea;color:#8b2a1a"><div class="cat-emoji">💊</div><div class="cat-name">Salud</div><div class="cat-desc">Médicos, medicamentos</div><div class="cat-tip">💡 Prioriza siempre la salud — es la inversión más importante.</div></div>
+      <div class="cat-card" style="background:#f0e8f8;color:#5a2d7a"><div class="cat-emoji">🎬</div><div class="cat-name">Entretenimiento</div><div class="cat-desc">Salidas, streaming, hobbies</div><div class="cat-tip">💡 Limítalo al 10–15% de tus ingresos. ¡El ocio es necesario!</div></div>
+      <div class="cat-card" style="background:#e8f4fd;color:#1a5a7a"><div class="cat-emoji">📚</div><div class="cat-name">Educación</div><div class="cat-desc">Cursos, libros, colegios</div><div class="cat-tip">💡 Invertir en conocimiento siempre tiene retorno positivo.</div></div>
+      <div class="cat-card" style="background:#fef4e8;color:#7a4a1a"><div class="cat-emoji">👕</div><div class="cat-name">Ropa</div><div class="cat-desc">Vestimenta y calzado</div><div class="cat-tip">💡 Compra prendas versátiles. Menos piezas, más uso.</div></div>
+      <div class="cat-card" style="background:#eafaf1;color:#1a6641"><div class="cat-emoji">🐷</div><div class="cat-name">Ahorros</div><div class="cat-desc">Metas y emergencias</div><div class="cat-tip">💡 Págate a ti mismo primero. Ahorra antes de gastar.</div></div>
+      <div class="cat-card" style="background:#f5f5f5;color:#444"><div class="cat-emoji">💡</div><div class="cat-name">Servicios</div><div class="cat-desc">Luz, agua, internet</div><div class="cat-tip">💡 Revisa si pagas suscripciones que ya no usas.</div></div>
+    </div>
+    <div class="note" style="margin-top:24px"><strong>👨‍👩‍👧 Para toda la familia:</strong> Reúnanse una vez por semana y revisen juntos en qué categoría gastaron más. Los niños también pueden aprender a clasificar sus gastos pequeños.</div>
+  </div>
+
+  <!-- PRESUPUESTO -->
+  <div id="tab-presupuesto" class="tab-content">
+    <h2 class="section-title">📊 Métodos de Presupuesto</h2>
+    <p class="section-sub">Una guía sin jerga para organizar tu dinero inteligentemente.</p>
+    <div class="card">
+      <div class="card-title">⚖️ La Regla 50 / 30 / 20</div>
+      <div class="card-sub">El método más popular para principiantes — simple y efectivo</div>
+      <div class="rule-viz">
+        <div class="rule-seg rule-needs"><span class="pct">50%</span><span class="lbl">Necesidades</span></div>
+        <div class="rule-seg rule-wants"><span class="pct">30%</span><span class="lbl">Deseos</span></div>
+        <div class="rule-seg rule-save"><span class="pct">20%</span><span class="lbl">Ahorros</span></div>
+      </div>
+      <div class="rule-legend">
+        <div class="legend-item needs"><div class="legend-label needs">50% — Necesidades</div><div class="legend-text">Vivienda, comida, transporte, salud, servicios. Todo lo imprescindible.</div></div>
+        <div class="legend-item wants"><div class="legend-label wants">30% — Deseos</div><div class="legend-text">Entretenimiento, restaurantes, ropa, hobbies. Lo que disfrutas.</div></div>
+        <div class="legend-item save"><div class="legend-label save">20% — Ahorro</div><div class="legend-text">Emergencias, metas, retiro, deudas. Tu seguridad futura.</div></div>
+      </div>
+      <div class="note"><strong>Ejemplo práctico:</strong> Si ganas $2.000.000 al mes → $1.000.000 para necesidades · $600.000 para deseos · $400.000 para ahorro.</div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">🎯 Presupuesto por Objetivos</div>
+        <div class="card-sub">Asigna dinero a metas específicas</div>
+        <div class="tip-list">
+          <div class="tip-item green"><div class="tip-icon">🏖️</div><div><div class="tip-title">Vacaciones</div><div class="tip-text">Divide el costo total entre los meses que faltan. Aparta esa suma fija cada mes.</div></div></div>
+          <div class="tip-item gold"><div class="tip-icon">📱</div><div><div class="tip-title">Compra grande</div><div class="tip-text">¿Quieres un celular nuevo? Define el precio y ahorra 10% de tus ingresos hasta lograrlo.</div></div></div>
+          <div class="tip-item coral"><div class="tip-icon">🏥</div><div><div class="tip-title">Fondo de emergencia</div><div class="tip-text">Meta: tener 3 a 6 meses de gastos guardados. Empieza con lo que puedas.</div></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">📅 Hábitos Diarios</div>
+        <div class="card-sub">Pequeñas acciones con gran impacto</div>
+        <div class="tip-list">
+          <div class="tip-item green"><div class="tip-icon">☀️</div><div><div class="tip-title">Revisa tus gastos cada noche</div><div class="tip-text">5 minutos antes de dormir. Anota todo lo que gastaste durante el día.</div></div></div>
+          <div class="tip-item gold"><div class="tip-icon">📷</div><div><div class="tip-title">Foto al recibo</div><div class="tip-text">Al comprar algo, fotografía el recibo. Luego es fácil recordar y registrar.</div></div></div>
+          <div class="tip-item coral"><div class="tip-icon">🗓️</div><div><div class="tip-title">Revisión dominical</div><div class="tip-text">Los domingos dedica 15 minutos a revisar la semana y planear la siguiente.</div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🚨 Mi Fondo de Emergencia</div>
+      <div class="card-sub">El colchón financiero que todos necesitan</div>
+      <p style="font-size:0.88rem;color:#555;line-height:1.6;margin-bottom:14px;">Un fondo de emergencia es dinero guardado <strong>solo para situaciones inesperadas</strong>: desempleo, enfermedad, reparaciones urgentes. Sin él, cualquier imprevisto puede arruinar tu presupuesto.</p>
+      <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+        <div class="form-group" style="flex:1;min-width:160px;"><label>Gastos mensuales ($)</label><input type="number" id="monthlyExpenses" placeholder="Ej: 1500000" oninput="updateEmergency()"></div>
+        <div class="form-group" style="flex:1;min-width:160px;"><label>Tengo ahorrado ($)</label><input type="number" id="savedAmount" placeholder="Ej: 200000" oninput="updateEmergency()"></div>
+      </div>
+      <div class="emerg-bar"><div class="emerg-fill" id="emergFill" style="width:0%">0%</div></div>
+      <div id="emergMsg" style="font-size:0.82rem;color:#777;margin-top:8px;">Ingresa tus datos para ver tu progreso.</div>
+    </div>
+  </div>
+
+  <!-- GRÁFICAS -->
+  <div id="tab-graficas" class="tab-content">
+    <h2 class="section-title">📈 Visualiza tus Patrones</h2>
+    <p class="section-sub">Los gráficos revelan hábitos que los números solos no muestran.</p>
+    <div class="grid-2">
+      <div class="card"><div class="card-title">🥧 Gastos por Categoría</div><div class="card-sub">¿En qué se va tu dinero?</div><div class="chart-wrap"><canvas id="pieChart"></canvas></div></div>
+      <div class="card"><div class="card-title">📊 Distribución del Mes</div><div class="card-sub">Ingresos vs gastos actuales</div><div class="chart-wrap"><canvas id="barChart"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔍 Analiza tus Patrones</div>
+      <div class="card-sub">Preguntas guía para reflexionar</div>
+      <div class="tip-list">
+        <div class="tip-item gold"><div class="tip-icon">🤔</div><div><div class="tip-title">¿Qué categoría consume más de lo esperado?</div><div class="tip-text">Compara tu gasto real con el presupuesto planeado. Si entretenimiento supera el 20%, es momento de revisar.</div></div></div>
+        <div class="tip-item green"><div class="tip-icon">📅</div><div><div class="tip-title">¿Tienes gastos hormiga?</div><div class="tip-text">Son pequeños gastos diarios (café, snacks, apps) que sumados al mes se vuelven enormes. ¡Identifícalos!</div></div></div>
+        <div class="tip-item coral"><div class="tip-icon">🔄</div><div><div class="tip-title">¿Ajustas cuando te pasas?</div><div class="tip-text">Si gastas de más en una categoría, recorta de otra. El presupuesto es flexible, ¡no una camisa de fuerza!</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ERRORES -->
+  <div id="tab-errores" class="tab-content">
+    <h2 class="section-title">⚠️ Errores Financieros Comunes</h2>
+    <p class="section-sub">Conocerlos es el primer paso para evitarlos.</p>
+    <div class="mistake-item"><div class="mistake-num">1</div><div><div class="mistake-title">No tener presupuesto</div><div class="mistake-text">Gastar sin un plan es como manejar sin GPS. El dinero desaparece y no sabes en qué. Solución: 10 minutos al mes para planear.</div></div></div>
+    <div class="mistake-item"><div class="mistake-num">2</div><div><div class="mistake-title">Comprar por impulso</div><div class="mistake-text">Ver algo bonito y comprarlo al instante. Aplica la regla de las 24 horas: espera un día antes de comprar algo no planeado.</div></div></div>
+    <div class="mistake-item"><div class="mistake-num">3</div><div><div class="mistake-title">No tener fondo de emergencia</div><div class="mistake-text">Sin este colchón, cualquier imprevisto puede endeudarte. Meta mínima: 1 mes de gastos guardado.</div></div></div>
+    <div class="mistake-item"><div class="mistake-num">4</div><div><div class="mistake-title">Pagar solo el mínimo de la tarjeta</div><div class="mistake-text">Los intereses se acumulan rápidamente. Si tienes tarjeta, págala completa cada mes o evita usarla para gastos del diario.</div></div></div>
+    <div class="mistake-item"><div class="mistake-num">5</div><div><div class="mistake-title">Ignorar los gastos pequeños</div><div class="mistake-text">Un café diario ($5.000) = $150.000 al mes = $1.800.000 al año. Los gastos hormiga son invisibles pero devastadores.</div></div></div>
+    <div class="mistake-item"><div class="mistake-num">6</div><div><div class="mistake-title">No comparar precios</div><div class="mistake-text">El primer precio que ves rara vez es el mejor. Dedica 2 minutos a comparar antes de comprar.</div></div></div>
+    <div class="mistake-item"><div class="mistake-num">7</div><div><div class="mistake-title">Mezclar gastos personales y del trabajo</div><div class="mistake-text">Si eres independiente o tienes negocio, usa cuentas separadas. Mezclarlos crea confusión y problemas tributarios.</div></div></div>
+    <div class="mistake-item"><div class="mistake-num">8</div><div><div class="mistake-title">Dejar el ahorro para después</div><div class="mistake-text">"Ahorro lo que sobre" — el gran error. Ahorra primero, apenas recibes tu dinero, aunque sea el 5%. Lo demás se ajusta solo.</div></div></div>
+  </div>
+
+  <!-- HERRAMIENTAS -->
+  <div id="tab-herramientas" class="tab-content">
+    <h2 class="section-title">🛠️ Herramientas y Apps Recomendadas</h2>
+    <p class="section-sub">Tecnología gratuita que puede transformar tu relación con el dinero.</p>
+    <div class="app-grid">
+      <div class="app-card"><div class="app-logo">📊</div><div class="app-name">Google Sheets / Excel</div><div class="app-type">Hoja de cálculo</div><div class="app-desc">Crea tu propia tabla de ingresos y gastos. Total control, sin complicaciones.</div><span class="app-free">✅ Gratis</span></div>
+      <div class="app-card"><div class="app-logo">💰</div><div class="app-name">Fintonic</div><div class="app-type">App móvil</div><div class="app-desc">Conecta tus cuentas bancarias y clasifica gastos automáticamente. Disponible en iOS y Android.</div><span class="app-free">✅ Gratis</span></div>
+      <div class="app-card"><div class="app-logo">📝</div><div class="app-name">Notion</div><div class="app-type">Organización</div><div class="app-desc">Crea tableros de presupuesto con plantillas. Muy visual y flexible para principiantes.</div><span class="app-free">✅ Gratis (básico)</span></div>
+      <div class="app-card"><div class="app-logo">💵</div><div class="app-name">Wallet by BudgetBakers</div><div class="app-type">App de finanzas</div><div class="app-desc">Registra gastos, crea presupuestos y ve gráficas claras. Interfaz muy amigable.</div><span class="app-free">✅ Gratis (básico)</span></div>
+      <div class="app-card"><div class="app-logo">🐷</div><div class="app-name">Spendee</div><div class="app-type">Presupuesto familiar</div><div class="app-desc">Ideal para familias. Permite compartir presupuesto con tu pareja o familia en tiempo real.</div><span class="app-free">✅ Gratis (básico)</span></div>
+      <div class="app-card"><div class="app-logo">📅</div><div class="app-name">Google Calendar</div><div class="app-type">Recordatorios</div><div class="app-desc">Configura alertas para fechas de pago de facturas y evita multas por mora.</div><span class="app-free">✅ Gratis</span></div>
+    </div>
+    <div class="card" style="margin-top:24px">
+      <div class="card-title">📚 Recursos para Aprender Más</div>
+      <div class="card-sub">Alfabetización financiera accesible en español</div>
+      <div class="resource-item"><div class="resource-icon">🎧</div><div><div class="resource-title">Podcast: "Educación Financiera" en Spotify</div><div class="resource-text">Finanzas personales explicadas en español. Sin jerga, muy práctico para el día a día.</div></div></div>
+      <div class="resource-item"><div class="resource-icon">📖</div><div><div class="resource-title">Libro: "El hombre más rico de Babilonia" — George S. Clason</div><div class="resource-text">Clásico de finanzas personales. Enseña principios básicos a través de historias fáciles de entender.</div></div></div>
+      <div class="resource-item"><div class="resource-icon">▶️</div><div><div class="resource-title">YouTube: Canales de finanzas personales en español</div><div class="resource-text">Videos cortos sobre presupuesto, ahorro e inversión para hispanohablantes principiantes.</div></div></div>
+      <div class="resource-item"><div class="resource-icon">🌐</div><div><div class="resource-title">Superintendencia Financiera de Colombia</div><div class="resource-text">Información oficial, calculadoras y guías gratuitas sobre productos financieros en Colombia.</div></div></div>
+    </div>
+  </div>
+
+  <!-- MENTALIDAD -->
+  <div id="tab-mentalidad" class="tab-content">
+    <h2 class="section-title">💚 Mentalidad Positiva con el Dinero</h2>
+    <p class="section-sub">Las finanzas son un hábito, no un talento. Todos pueden aprenderlo.</p>
+    <div class="affirmation-box">
+      <h3 id="affirmationText">"No necesitas ganar más para ahorrar. Necesitas saber adónde va cada peso."</h3>
+      <p>Cambiar la relación con el dinero empieza por cambiar cómo piensas en él. No como un enemigo, sino como una herramienta que tú controlas.</p>
+      <div class="affirmation-cycle">
+        <div class="aff-chip" onclick="changeAffirmation(0)">Motivación</div>
+        <div class="aff-chip" onclick="changeAffirmation(1)">Constancia</div>
+        <div class="aff-chip" onclick="changeAffirmation(2)">Sin culpa</div>
+        <div class="aff-chip" onclick="changeAffirmation(3)">Familia</div>
+        <div class="aff-chip" onclick="changeAffirmation(4)">Crecimiento</div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">🌱 Integrar Ahorro al Día a Día</div>
+        <div class="card-sub">Pequeñas decisiones, gran impacto</div>
+        <div class="tip-list">
+          <div class="tip-item green"><div class="tip-icon">☕</div><div><div class="tip-title">El café en casa</div><div class="tip-text">Hacer el café en casa 3 días a la semana puede ahorrarte $120.000 al mes sin esfuerzo.</div></div></div>
+          <div class="tip-item gold"><div class="tip-icon">📦</div><div><div class="tip-title">Compra a granel</div><div class="tip-text">Productos de limpieza y no perecederos al por mayor salen hasta 40% más baratos.</div></div></div>
+          <div class="tip-item coral"><div class="tip-icon">🎮</div><div><div class="tip-title">Ocio gratis primero</div><div class="tip-text">Antes de pagar por entretenimiento, explora opciones gratis: parques, bibliotecas, YouTube.</div></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">👨‍👩‍👧 Involucra a tu Familia</div>
+        <div class="card-sub">El presupuesto familiar es cosa de todos</div>
+        <div class="tip-list">
+          <div class="tip-item green"><div class="tip-icon">🗣️</div><div><div class="tip-title">Reunión semanal de 15 minutos</div><div class="tip-text">Revisar juntos los gastos de la semana. Sin culpas, solo información. ¿Qué se puede mejorar?</div></div></div>
+          <div class="tip-item gold"><div class="tip-icon">🧒</div><div><div class="tip-title">Enseña a los niños</div><div class="tip-text">Dales una mesada pequeña y enséñales a dividirla: gastar, ahorrar y dar. Lección de vida invaluable.</div></div></div>
+          <div class="tip-item coral"><div class="tip-icon">🎯</div><div><div class="tip-title">Metas compartidas</div><div class="tip-text">Define una meta familiar (vacaciones, electrodoméstico). Ahorrar juntos genera motivación y unión.</div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔁 Revisar y Ajustar con el Tiempo</div>
+      <div class="card-sub">El presupuesto perfecto no existe — existe el que se adapta</div>
+      <div class="grid-3">
+        <div style="text-align:center;padding:20px;background:var(--sage-pale);border-radius:14px;"><div style="font-size:2rem;margin-bottom:8px;">📆</div><div style="font-weight:600;color:var(--sage);margin-bottom:6px;">Mensualmente</div><div style="font-size:0.8rem;color:#555;">Revisa si cumpliste el presupuesto. ¿Qué categoría se desbordó? ¿Puedes reducirla?</div></div>
+        <div style="text-align:center;padding:20px;background:var(--gold-pale);border-radius:14px;"><div style="font-size:2rem;margin-bottom:8px;">📊</div><div style="font-weight:600;color:var(--gold);margin-bottom:6px;">Trimestralmente</div><div style="font-size:0.8rem;color:#555;">Analiza tendencias de 3 meses. ¿Mejoraste? ¿Hay gastos recurrentes que no veías?</div></div>
+        <div style="text-align:center;padding:20px;background:var(--coral-pale);border-radius:14px;"><div style="font-size:2rem;margin-bottom:8px;">🏆</div><div style="font-weight:600;color:var(--coral);margin-bottom:6px;">Anualmente</div><div style="font-size:0.8rem;color:#555;">Celebra tus logros. Ajusta metas. Aumenta el porcentaje de ahorro si puedes.</div></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+let transactions = [];
+try { transactions = JSON.parse(localStorage.getItem('miDineroTx') || '[]'); } catch(e) { transactions = []; }
+
+const catConfig = {
+  comestibles:     { icon: '🛒', color: '#4a7c59', bg: '#e8f0eb' },
+  vivienda:        { icon: '🏠', color: '#3d5abf', bg: '#e8ecf8' },
+  transporte:      { icon: '🚌', color: '#c8922a', bg: '#fdf6e3' },
+  salud:           { icon: '💊', color: '#c44a3a', bg: '#fdecea' },
+  entretenimiento: { icon: '🎬', color: '#7a3abf', bg: '#f0e8f8' },
+  educacion:       { icon: '📚', color: '#1a7aaa', bg: '#e8f4fd' },
+  ropa:            { icon: '👕', color: '#9a6030', bg: '#fef4e8' },
+  ahorros:         { icon: '🐷', color: '#1a7a50', bg: '#eafaf1' },
+  servicios:       { icon: '💡', color: '#555',    bg: '#f5f5f5' },
+  salario:         { icon: '💵', color: '#4a7c59', bg: '#e8f0eb' },
+  extra:           { icon: '🎁', color: '#7a4abf', bg: '#f0e8f8' },
+};
+
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'graficas') setTimeout(renderCharts, 120);
+}
+
+const d = new Date();
+const ds = d.toLocaleDateString('es-CO', { weekday:'long', day:'numeric', month:'long' });
+document.getElementById('headerDate').textContent = ds.charAt(0).toUpperCase() + ds.slice(1);
+
+function addTransaction() {
+  const desc   = document.getElementById('txDesc').value.trim();
+  const amount = parseFloat(document.getElementById('txAmount').value);
+  const cat    = document.getElementById('txCategory').value;
+  const type   = document.getElementById('txType').value;
+  if (!desc || !amount || amount <= 0) { alert('Por favor completa descripción y monto válido.'); return; }
+  transactions.unshift({ id: Date.now(), desc, amount, cat, type, date: new Date().toLocaleDateString('es-CO') });
+  save(); render(); updateStats();
+  document.getElementById('txDesc').value = '';
+  document.getElementById('txAmount').value = '';
+}
+
+function deleteTx(id) {
+  transactions = transactions.filter(t => t.id !== id);
+  save(); render(); updateStats();
+}
+
+function save() { try { localStorage.setItem('miDineroTx', JSON.stringify(transactions)); } catch(e) {} }
+
+function render() {
+  const list = document.getElementById('transactionsList');
+  document.getElementById('txCount').textContent = transactions.length ? `${transactions.length} movimiento${transactions.length !== 1 ? 's' : ''} registrado${transactions.length !== 1 ? 's' : ''}` : 'Sin movimientos aún';
+  if (!transactions.length) { list.innerHTML = '<div class="empty-state"><div class="emoji">💳</div><p>Aún no hay movimientos.<br>¡Registra tu primer gasto o ingreso!</p></div>'; return; }
+  list.innerHTML = transactions.slice(0, 25).map(tx => {
+    const c = catConfig[tx.cat] || { icon: '💰', color: '#555', bg: '#f5f5f5' };
+    return `<div class="tx-item">
+      <div class="tx-icon" style="background:${c.bg}">${c.icon}</div>
+      <div class="tx-info"><div class="tx-name">${tx.desc}</div><div class="tx-date">${tx.date}</div></div>
+      <span class="tx-cat pill" style="background:${c.bg};color:${c.color}">${tx.cat}</span>
+      <span class="tx-amount ${tx.type==='income'?'positive':'negative'}">${tx.type==='income'?'+':'-'}$${tx.amount.toLocaleString('es-CO')}</span>
+      <button class="tx-delete" onclick="deleteTx(${tx.id})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function updateStats() {
+  const inc = transactions.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  const exp = transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const bal = inc - exp;
+  document.getElementById('totalIncome').textContent  = '$'+inc.toLocaleString('es-CO');
+  document.getElementById('totalExpense').textContent = '$'+exp.toLocaleString('es-CO');
+  document.getElementById('totalBalance').textContent = '$'+bal.toLocaleString('es-CO');
+  document.getElementById('headerBalance').textContent= '$'+bal.toLocaleString('es-CO');
+}
+
+let pieInst = null, barInst = null;
+function renderCharts() {
+  const exp = transactions.filter(t=>t.type==='expense');
+  const totals = {};
+  exp.forEach(t => totals[t.cat] = (totals[t.cat]||0) + t.amount);
+  const labels = Object.keys(totals), data = Object.values(totals);
+  const colors = labels.map(l => catConfig[l] ? catConfig[l].color : '#999');
+  const pc = document.getElementById('pieChart').getContext('2d');
+  if (pieInst) pieInst.destroy();
+  if (labels.length) {
+    pieInst = new Chart(pc, { type:'doughnut', data:{ labels, datasets:[{ data, backgroundColor:colors, borderWidth:3, borderColor:'#fff' }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ font:{ family:'DM Sans', size:11 }, padding:12 } } } } });
+  } else {
+    pc.clearRect(0,0,300,260); pc.fillStyle='#ccc'; pc.font='14px DM Sans'; pc.textAlign='center'; pc.fillText('Sin gastos registrados aún',150,130);
+  }
+  const inc = transactions.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  const expt= transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const bc = document.getElementById('barChart').getContext('2d');
+  if (barInst) barInst.destroy();
+  barInst = new Chart(bc, { type:'bar', data:{ labels:['Ingresos','Gastos','Balance'], datasets:[{ data:[inc,expt,inc-expt], backgroundColor:['#4a7c59','#d4614a',inc-expt>=0?'#c8922a':'#d4614a'], borderRadius:8, borderSkipped:false }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true, grid:{ color:'#f0f2f5' }, ticks:{ font:{ family:'DM Sans' } } }, x:{ grid:{ display:false }, ticks:{ font:{ family:'DM Sans', weight:'600' } } } } } });
+}
+
+function updateEmergency() {
+  const m = parseFloat(document.getElementById('monthlyExpenses').value)||0;
+  const s = parseFloat(document.getElementById('savedAmount').value)||0;
+  if (!m) return;
+  const goal = m*3, pct = Math.min(Math.round(s/goal*100),100);
+  document.getElementById('emergFill').style.width = pct+'%';
+  document.getElementById('emergFill').textContent = pct+'%';
+  document.getElementById('emergMsg').textContent = pct>=100
+    ? '🎉 ¡Felicitaciones! Tienes un fondo de emergencia sólido de 3 meses.'
+    : `Meta: $${goal.toLocaleString('es-CO')} (3 meses) · Faltan: $${Math.max(goal-s,0).toLocaleString('es-CO')} · Progreso: ${pct}%`;
+}
+
+const affirmations = [
+  '"No necesitas ganar más para ahorrar. Necesitas saber adónde va cada peso."',
+  '"La constancia en finanzas no es perfecta — es volver a empezar cada vez que fallas."',
+  '"No te castigues por errores del pasado. El dinero que tienes hoy es el que puedes cuidar."',
+  '"Cuando la familia habla de dinero sin miedo, todos crecen juntos."',
+  '"Cada pequeño ahorro es una semilla. La riqueza es el árbol que crece con paciencia."',
+];
+function changeAffirmation(i) { document.getElementById('affirmationText').textContent = affirmations[i]; }
+
+render(); updateStats();
+</script>
+</body>
+</html>
